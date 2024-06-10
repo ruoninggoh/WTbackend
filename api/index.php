@@ -10,6 +10,9 @@ header("Access-Control-Allow-Headers: Content-Type, Authorization");
 require './userList.php';
 require './orderList.php';
 require './menu.php';
+require './adminDashboard.php';
+require './userOrder.php';
+
 
 $app->run();
 ?>
