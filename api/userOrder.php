@@ -7,8 +7,8 @@ $app->get('/orders/{user_id}', function (Request $request, Response $response, $
     $db = new db();
     $con = $db->connect();
     $user_id = $args['user_id'];
-    $user_id = 2;  // This seems like a debug/test value. Remove or modify it as necessary.
-
+    // $user_id = 2;  
+    
     try {
         $query = "SELECT o.*, u.Username, GROUP_CONCAT(oi.food_ID) as food_IDs, GROUP_CONCAT(oi.quantity) as quantities, GROUP_CONCAT(oi.price) as prices
                   FROM `orders` o
@@ -43,7 +43,7 @@ $app->get('/orders/{user_id}', function (Request $request, Response $response, $
             }
             $order['items'] = $items;
           
-            $order['payment_method'] = $order['payment_method'];  // Assuming this is a column in the orders table
+            $order['payment_method'] = $order['payment_method'];  
         }
 
         $response->getBody()->write(json_encode($orders));

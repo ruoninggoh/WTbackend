@@ -66,10 +66,6 @@ $app->get('/average_sales_permenu', function (Request $request, Response $respon
     }
 });
 
-
-
-
-
 $app->get('/total_orders', function (Request $request, Response $response, $args) {
     $db = new db();
     $con = $db->connect();
