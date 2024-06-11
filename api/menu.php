@@ -23,158 +23,163 @@ $app->get('/menuList', function (Request $request, Response $response, $args) {
 });
 
 $app->post('/addMenu', function (Request $request, Response $response, $args) {
-    $db = new db();
-    $con = $db->connect();
-    
-    // Process form data
-    $formData = $request->getParsedBody();
-
-    // Extract form fields
-    $foodName = $formData['foodName'];
-    $foodDescription = $formData['foodDescription'];
-    $foodPrice = $formData['foodPrice'];
-    $foodAvailability = $formData['foodAvailability']; 
-
-    if(isset($_FILES['foodImg']['name'])){
-        //get selected image name
-        $foodImgName = $_FILES['foodImg']['name'];
+    try{
+        $db = new db();
+        $con = $db->connect();
         
-        if($foodImgName!=""){
-            $foodImgName = explode('.', $foodImgName);
-            $ext = end($foodImgName);
-
-            $foodImgName = "Food-".rand(0000,9999).".".$ext;
-
-            $src=$_FILES['foodImg']['tmp_name'];
-
-            $dst = "../../frontend/src/assets/image/food/".$foodImgName;
-
-            $upload = move_uploaded_file($src, $dst);
+        // Process form data
+        $formData = $request->getParsedBody();
+    
+        // Extract form fields
+        $foodName = $formData['foodName'];
+        $foodDescription = $formData['foodDescription'];
+        $foodPrice = $formData['foodPrice'];
+        $foodAvailability = $formData['foodAvailability']; 
+    
+        if(isset($_FILES['foodImg']['name'])){
+            //get selected image name
+            $foodImgName = $_FILES['foodImg']['name'];
             
+            if($foodImgName!=""){
+                $foodImgName = explode('.', $foodImgName);
+                $ext = end($foodImgName);
+    
+                $foodImgName = "Food-".rand(0000,9999).".".$ext;
+    
+                $src=$_FILES['foodImg']['tmp_name'];
+    
+                $dst = "../../frontend/src/assets/image/food/".$foodImgName;
+    
+                $upload = move_uploaded_file($src, $dst);
+                
+            }
+    
+        } else {
+            $foodImgName = "";
+        }
+    
+    
+        $sql = "INSERT INTO Menu (FoodName, FoodDescription, FoodImg, FoodPrice, FoodAvailability) 
+                VALUES (?, ?, ?, ?, ?)";
+        $stmt = $con->prepare($sql);
+        $stmt->execute([$foodName, $foodDescription, $foodImgName, $foodPrice, $foodAvailability]);
+
+        if ($stmt->rowCount() > 0) {
+            // Return a JSON response instead of redirecting
+            $responseBody = json_encode(['status' => 'success', 'message' => 'Menu added successfully']);
+            return $response->withHeader('Content-Type', 'application/json')->write($responseBody);
+        } else {
+            $responseBody = json_encode(['status' => 'error', 'message' => 'Failed to add menu']);
+            return $response->withHeader('Content-Type', 'application/json')->write($responseBody);
         }
 
-    } else {
-        $foodImgName = "";
+    } catch (Exception $e) {
+        return $response->withJson(['status' => 'error', 'message' => 'Failed to add menu']);
     }
-
-
-    $sql = "INSERT INTO Menu (FoodName, FoodDescription, FoodImg, FoodPrice, FoodAvailability) 
-            VALUES (?, ?, ?, ?, ?)";
-    $stmt = $con->prepare($sql);
-    $stmt->execute([$foodName, $foodDescription, $foodImgName, $foodPrice, $foodAvailability]);
-
-    if ($stmt->rowCount() > 0) {
-        // Return a JSON response instead of redirecting
-        $responseBody = json_encode(['success' => true, 'message' => 'Menu added successfully']);
-        return $response->withHeader('Content-Type', 'application/json')->write($responseBody);
-    } else {
-        $responseBody = json_encode(['success' => false, 'message' => 'Failed to add menu']);
-        return $response->withHeader('Content-Type', 'application/json')->write($responseBody);
-    }
+    
 });
 
 $app->post('/updateMenu', function (Request $request, Response $response) {
-    $db = new db();
-    $con = $db->connect();
+    try{
+        $db = new db();
+        $con = $db->connect();
 
-    $formData = $request->getParsedBody();
+        $formData = $request->getParsedBody();
 
-    $id = $formData['id'];
-    $name = $formData['foodName'];
-    $currentImg = $formData['currentImg'];
-    $description = $formData['foodDescription'];
-    $price = $formData['foodPrice'];
-    $availability = $formData['foodAvailability'];
+        $id = $formData['id'];
+        $name = $formData['foodName'];
+        $currentImg = $formData['currentImg'];
+        $description = $formData['foodDescription'];
+        $price = $formData['foodPrice'];
+        $availability = $formData['foodAvailability'];
 
-    if(isset($_FILES['foodImg']['name'])){
-        $foodImg = $_FILES['foodImg']['name'];
+        if(isset($_FILES['foodImg']['name'])){
+            $foodImg = $_FILES['foodImg']['name'];
 
-        if($foodImg!=""){
-            //upload new image
-            $foodImg = explode('.', $foodImg);
-            $ext = end($foodImg);
-            $foodImg = "Food-".rand(0000, 9999).'.'.$ext;
-            $src_path = $_FILES['foodImg']['tmp_name'];
-            $des_path = "../../frontend/src/assets/image/food/".$foodImg;
+            if($foodImg!=""){
+                //upload new image
+                $foodImg = explode('.', $foodImg);
+                $ext = end($foodImg);
+                $foodImg = "Food-".rand(0000, 9999).'.'.$ext;
+                $src_path = $_FILES['foodImg']['tmp_name'];
+                $des_path = "../../frontend/src/assets/image/food/".$foodImg;
 
-            $upload = move_uploaded_file($src_path, $des_path);
+                $upload = move_uploaded_file($src_path, $des_path);
 
-            //remove current image
-            if ($currentImg) {
-                $path = "../../frontend/src/assets/image/food/$currentImg";
-                if (file_exists($path)) {
-                    unlink($path);
+                //remove current image
+                if ($currentImg) {
+                    $path = "../../frontend/src/assets/image/food/$currentImg";
+                    if (file_exists($path)) {
+                        unlink($path);
+                    }
                 }
+
+            } else {
+                $foodImg = $currentImg;
             }
 
         } else {
             $foodImg = $currentImg;
         }
+        
+        $sql = "UPDATE menu SET 
+                FoodName = :name,
+                FoodDescription = :description,
+                FoodImg = :foodImg,
+                FoodPrice = :price,
+                FoodAvailability = :availability
+                WHERE FoodID = :id";
+        $stmt = $con->prepare($sql);
+        $stmt->execute([
+            'name' => $name,
+            'description' => $description,
+            'foodImg' => $foodImg,
+            'price' => $price,
+            'availability' => $availability,
+            'id' => $id
+        ]);
 
-    } else {
-        $foodImg = $currentImg;
-    }
-
-    $sql = "UPDATE menu SET 
-            FoodName = :name,
-            FoodDescription = :description,
-            FoodImg = :foodImg,
-            FoodPrice = :price,
-            FoodAvailability = :availability
-            WHERE FoodID = :id";
-    $stmt = $con->prepare($sql);
-    $stmt->execute([
-        'name' => $name,
-        'description' => $description,
-        'foodImg' => $foodImg,
-        'price' => $price,
-        'availability' => $availability,
-        'id' => $id
-    ]);
-
-    // Return a response based on the outcome
-    if ($stmt->rowCount() > 0) {
-        $responseBody = json_encode(['success' => true, 'message' => 'Food updated successfully']);
-        return $response->withHeader('Content-Type', 'application/json')->getBody()->write($responseBody);
-    } else {
-        $responseBody = json_encode(['success' => false, 'message' => 'Failed to update food']);
-        return $response->withHeader('Content-Type', 'application/json')->getBody()->write($responseBody);
+        // Return a response based on the outcome
+        return $response->withJson(['status' => 'success', 'message' => 'Food updated successfully']);
+    } catch(Exception $e){
+        return $response->withJson(['status' => 'error', 'message' => 'Failed to update food']);
     }
 });
 
 $app->delete('/deleteMenu/{foodId}', function (Request $request, Response $response, $args) {
-    $foodId = $args['foodId'];
+    try{
+        $foodId = $args['foodId'];
 
-    $db = new db();
-    $con = $db->connect();
-
-    $sql = "SELECT FoodImg FROM menu WHERE FoodID = ?";
-    $stmt = $con->prepare($sql);
-    $stmt->execute([$foodId]);
-    $foodImg = $stmt->fetchColumn();
-
-    if ($foodImg) {
-        $path = "../../frontend/src/assets/image/food/$foodImg";
-        if (file_exists($path)) {
-            unlink($path);
+        $db = new db();
+        $con = $db->connect();
+    
+        $sql = "SELECT FoodImg FROM menu WHERE FoodID = ?";
+        $stmt = $con->prepare($sql);
+        $stmt->execute([$foodId]);
+        $foodImg = $stmt->fetchColumn();
+    
+        if ($foodImg) {
+            $path = "../../frontend/src/assets/image/food/$foodImg";
+            if (file_exists($path)) {
+                unlink($path);
+            }
         }
+    
+        $sql = "DELETE FROM menu WHERE FoodID = ?";
+        $stmt = $con->prepare($sql);
+        $result = $stmt->execute([$foodId]);
+    
+        if ($result) {
+            
+            return $response->withJson(['status' => 'success', 'message' => 'Menu deleted successfully']);
+        } else {
+            
+            return $response->withJson(['status' => 'error', 'message' => 'Failed to delete food']);
+        }
+    } catch (Exception $e){
+        return $response->withJson(['status' => 'error', 'message' => 'Failed to delete food']);
     }
-
-    $sql = "DELETE FROM menu WHERE FoodID = ?";
-    $stmt = $con->prepare($sql);
-    $result = $stmt->execute([$foodId]);
-
-    if ($result) {
-        $response->getBody()->write(json_encode([
-            'status' => 'success',
-            'message' => 'Menu deleted successfully'
-        ]));
-    } else {
-        $response->getBody()->write(json_encode([
-            'status' => 'error',
-            'message' => 'Failed to delete'
-        ]));
-    }
+    
 });
 
 ?>

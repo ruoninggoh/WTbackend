@@ -6,43 +6,37 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 $app->get('/orderManageList', function (Request $request, Response $response, $args) {
     $params = $request->getQueryParams();
 
-    $sort_method = $params['sort'] ?? null;
+    $filter = $params['filter'] ?? null;
     $search_val = $params['search_val'] ?? null;
 
     $db = new db();
     $con = $db->connect();
 
     try {
-        if ($sort_method && $search_val) {
-            if ($sort_method == "sortname") {
-                $query = "SELECT * FROM orders WHERE order_ID = :searchVal OR customer_name=:searchVal ORDER BY customer_name";
-            } else if ($sort_method == "sortdate") {
-                $query = "SELECT * FROM orders WHERE order_ID = :searchVal OR customer_name=:searchVal ORDER BY cdate DESC";
-            } else {
-                $query = "SELECT * FROM orders WHERE order_ID = :searchVal OR customer_name=:searchVal";
-            }
+        if ($filter && $search_val) {
+
+            $query = "SELECT * FROM orders WHERE order_ID = :searchVal OR customer_name=:searchVal AND order_status=:order_status ORDER BY cdate DESC";
+            $searchPattern = "%" . $searchVal . "%";
             $stmt = $con->prepare($query);
-            $stmt->bindValue("searchVal", $search_val);
-        } elseif ($sort_method) {
-            if ($sort_method == "sortname") {
-                $query = "SELECT * FROM orders ORDER BY customer_name";
-            } elseif ($sort_method == "sortdate") {
-                $query = "SELECT * FROM orders ORDER BY cdate DESC";
-            } else {
-                $query = "SELECT * FROM orders";
-            }
+            $stmt->bindValue("searchVal", $searchPattern);
+            $stmt->bindValue("order_status", $filter);
+
+        } elseif ($filter) {
+            $query = "SELECT * FROM orders WHERE order_status=:order_status ORDER BY cdate DESC";
             $stmt = $con->prepare($query);
+            $stmt->bindValue("order_status", $filter);
         } elseif ($search_val) {
             if ($search_val == "") {
-                $query = "SELECT * FROM orders";
+                $query = "SELECT * FROM orders ORDER BY cdate DESC";
                 $stmt = $con->prepare($query);
             } else {
-                $query = "SELECT * FROM orders WHERE order_ID = :searchVal OR customer_name=:searchVal";
+                $query = "SELECT * FROM orders WHERE order_ID = :searchVal OR customer_name=:searchVal ORDER BY cdate DESC";
+                $searchPattern = "%" . $searchVal . "%";
                 $stmt = $con->prepare($query);
-                $stmt->bindValue("searchVal", $search_val);
+                $stmt->bindValue("searchVal", $searchPattern);
             }
         } else {
-            $query = "SELECT * FROM orders";
+            $query = "SELECT * FROM orders ORDER BY cdate DESC";
             $stmt = $con->prepare($query);
         }
 
@@ -120,23 +114,12 @@ $app->put('/updateOrder/{orderId}', function (Request $request, Response $respon
         $stmt = $con->prepare($q3);
         $stmt->execute([$status, $cus_name, $contact, $address, $orderId]);
 
-        if ($stmt->rowCount() > 0) {
-            $response->getBody()->write(json_encode([
-                'status' => 'success',
-                'message' => 'Order Updated Successfully'
-            ]));
-        } else {
-            $response->getBody()->write(json_encode([
-                'status' => 'error',
-                'message' => 'Failed to Update Order'
-            ]));
-        }
+        return $response->withJson(['status' => 'success',
+                'message' => 'Order Updated Successfully']);
+
     } catch (PDOException $e) {
-        $response->getBody()->write(json_encode([
-            'status' => 'error',
-            'message' => $e->getMessage()
-        ]));
-        return $response->withStatus(500)->withHeader('Content-Type', 'application/json');
+        return $response->withJson(['status' => 'error',
+            'message' => $e->getMessage()]);
     }
 
     return $response->withHeader('Content-Type', 'application/json');
