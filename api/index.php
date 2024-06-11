@@ -11,6 +11,8 @@ require './userList.php';
 require './orderList.php';
 require './menu.php';
 require './order.php';
+require './adminDashboard.php';
+require './userOrder.php';
 
 
 $app->run();

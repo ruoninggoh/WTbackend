@@ -33,18 +33,30 @@ $app->post('/addMenu', function (Request $request, Response $response, $args) {
     $foodName = $formData['foodName'];
     $foodDescription = $formData['foodDescription'];
     $foodPrice = $formData['foodPrice'];
-    $foodAvailability = $formData['foodAvailability']; // No need for isset as it's always sent from the frontend
+    $foodAvailability = $formData['foodAvailability']; 
 
-    // Handle file upload
-    $uploadedFile = $request->getUploadedFiles()['foodImg'] ?? null;
-    if ($uploadedFile !== null && $uploadedFile->getError() === UPLOAD_ERR_OK) {
-        $filename = $uploadedFile->getClientFilename();
-        $ext = pathinfo($filename, PATHINFO_EXTENSION);
-        $foodImgName = "Food-" . uniqid() . "." . $ext;
-        $uploadedFile->moveTo(__DIR__ . "/../../assets/image/food/$foodImgName"); // Corrected path
+    if(isset($_FILES['foodImg']['name'])){
+        //get selected image name
+        $foodImgName = $_FILES['foodImg']['name'];
+        
+        if($foodImgName!=""){
+            $foodImgName = explode('.', $foodImgName);
+            $ext = end($foodImgName);
+
+            $foodImgName = "Food-".rand(0000,9999).".".$ext;
+
+            $src=$_FILES['foodImg']['tmp_name'];
+
+            $dst = "../../frontend/src/assets/image/food/".$foodImgName;
+
+            $upload = move_uploaded_file($src, $dst);
+            
+        }
+
     } else {
-        $foodImgName = '';
+        $foodImgName = "";
     }
+
 
     $sql = "INSERT INTO Menu (FoodName, FoodDescription, FoodImg, FoodPrice, FoodAvailability) 
             VALUES (?, ?, ?, ?, ?)";
@@ -74,25 +86,35 @@ $app->post('/updateMenu', function (Request $request, Response $response) {
     $price = $formData['foodPrice'];
     $availability = $formData['foodAvailability'];
 
-    // Handle file upload
-    $uploadedFile = $request->getUploadedFiles()['foodImg'] ?? null;
-    if ($uploadedFile !== null && $uploadedFile->getError() === UPLOAD_ERR_OK) {
-        $filename = $uploadedFile->getClientFilename();
-        $ext = pathinfo($filename, PATHINFO_EXTENSION);
-        $foodImg = "Food-" . uniqid() . "." . $ext;
-        $uploadedFile->moveTo(__DIR__ . "/../../assets/image/food/$foodImg"); // Corrected path
+    if(isset($_FILES['foodImg']['name'])){
+        $foodImg = $_FILES['foodImg']['name'];
 
-        if ($currentImg) {
-            $path = "../../frontend/src/assets/image/food/$currentImg";
-            if (file_exists($path)) {
-                unlink($path);
+        if($foodImg!=""){
+            //upload new image
+            $foodImg = explode('.', $foodImg);
+            $ext = end($foodImg);
+            $foodImg = "Food-".rand(0000, 9999).'.'.$ext;
+            $src_path = $_FILES['foodImg']['tmp_name'];
+            $des_path = "../../frontend/src/assets/image/food/".$foodImg;
+
+            $upload = move_uploaded_file($src_path, $des_path);
+
+            //remove current image
+            if ($currentImg) {
+                $path = "../../frontend/src/assets/image/food/$currentImg";
+                if (file_exists($path)) {
+                    unlink($path);
+                }
             }
+
+        } else {
+            $foodImg = $currentImg;
         }
+
     } else {
         $foodImg = $currentImg;
     }
 
-    // Proceed with your database update logic using an ORM or direct query execution
     $sql = "UPDATE menu SET 
             FoodName = :name,
             FoodDescription = :description,
